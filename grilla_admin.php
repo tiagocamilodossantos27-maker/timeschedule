@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_grilla_accion
     $creado_por = $_SESSION['usuario_id'];
 
     try {
-        // Iniciar transacción: si algo falla, no se guarda nada a medias
         $pdo->beginTransaction();
 
         $pdo->prepare("UPDATE grupos SET turno = ? WHERE id = ?")->execute([$turno_post, $grupo_id_post]);
@@ -39,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_grilla_accion
         }
 
         if (isset($_POST['clase'])) {
-            // CORRECCIÓN: Se eliminó 'tipo_ubicacion' para evitar el fallo de base de datos que dejaba la grilla vacía
             $stmtClase = $pdo->prepare("INSERT INTO horarios_clase (grilla_id, modulo_id, dia_semana, materia_id, docente_id) VALUES (?, ?, ?, ?, ?)");
             
             foreach ($_POST['clase'] as $modulo_id => $dias) {
@@ -51,10 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_grilla_accion
             }
         }
 
-        $pdo->commit(); // Confirmar guardado
+        $pdo->commit();
         $mensaje = "Grilla guardada como " . strtoupper($nuevo_estado) . " con éxito.";
     } catch (Exception $e) {
-        $pdo->rollBack(); // Deshacer cambios en caso de error
+        $pdo->rollBack();
         $error_msj = "Error en la base de datos: " . $e->getMessage();
     }
     
@@ -72,7 +70,7 @@ $grupoActual = null;
 $estadoGrilla = 'Nuevo';
 $modulos = [];
 $clasesGuardadas = [];
-$docentes_ocupados = []; // Array para control de superposiciones
+$docentes_ocupados = [];
 
 if ($grupo_id) {
     $stmtGrupo = $pdo->prepare("SELECT * FROM grupos WHERE id = ?");
@@ -100,27 +98,24 @@ if ($grupo_id) {
     $stmtMod->execute([$turno_seleccionado]);
     $modulos = $stmtMod->fetchAll();
 
-    // --- DETECCIÓN DE SUPERPOSICIONES HORARIAS ---
-    // 1. Buscar en qué otros grupos internos de la escuela están dando clase
+    // Detección interna
     $stmtOcupadosInt = $pdo->prepare("SELECT hc.docente_id, hc.modulo_id, hc.dia_semana, g.nombre_grupo 
                                       FROM horarios_clase hc 
                                       JOIN grillas gr ON hc.grilla_id = gr.id 
                                       JOIN grupos g ON gr.grupo_id = g.id 
-                                      WHERE gr.grupo_id != ?"); // Excluimos el grupo actual
+                                      WHERE gr.grupo_id != ?");
     $stmtOcupadosInt->execute([$grupo_id]);
     foreach ($stmtOcupadosInt->fetchAll() as $row) {
         $docentes_ocupados[$row['docente_id']][$row['modulo_id']][$row['dia_semana']] = "Grupo " . $row['nombre_grupo'];
     }
 
-    // 2. Buscar si tienen horarios en instituciones externas en ese módulo/día
+    // Detección externa
     try {
         $stmtOcupadosExt = $pdo->query("SELECT docente_id, modulo_id, dia_semana, nombre_institucion FROM docentes_horarios_externos");
         foreach ($stmtOcupadosExt->fetchAll() as $row) {
             $docentes_ocupados[$row['docente_id']][$row['modulo_id']][$row['dia_semana']] = "Ext: " . $row['nombre_institucion'];
         }
-    } catch (Exception $e) {
-        // En caso de que la tabla de externos no exista todavía, el sistema no se rompe
-    }
+    } catch (Exception $e) {}
 }
 ?>
 
@@ -229,37 +224,37 @@ if ($grupo_id) {
                                     
                                     <?php foreach ($dias as $dia): ?>
                                         <?php 
-                                            $claseActual = $clasesGuardadas[$mod['id']][$dia] ?? null;
-                                            $mat_id = $claseActual['materia_id'] ?? '';
-                                            $doc_id = $claseActual['docente_id'] ?? '';
+                                            $claseActual =$clasesGuardadas[$mod['id']][$dia] ?? null;
+                                            $mat_id =$claseActual['materia_id'] ?? '';
+                                            $doc_id =$claseActual['docente_id'] ?? '';
                                         ?>
                                         <td class="p-1 align-middle">
-                                            <!-- Selector de Materia -->
-                                            <select name="clase[<?= $mod['id'] ?>][<?= $dia ?>][materia]" class="form-select select-mini border-primary text-uppercase fw-bold">
-                                                <option value="">- Materia -</option>
-                                                <?php foreach ($materias as $mat): ?>
-                                                    <option value="<?= $mat['id'] ?>" <?= $mat_id == $mat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($mat['nombre']) ?></option>
+                                            <!-- Selector de Materia con atributo data-tipo -->
+                                            <select name="clase[<?= $mod['id'] ?>][<?=$dia ?>][materia]" class="form-select select-mini border-primary text-uppercase fw-bold">
+                                                <option value="">-- Materia --</option>
+                                                <?php foreach ($materias as$mat): ?>
+                                                    <option value="<?= $mat['id'] ?>" data-tipo="<?= htmlspecialchars($mat['tipo'] ?? '') ?>" <?= $mat_id ==$mat['id'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($mat['nombre']) ?>
+                                                    </option>
                                                 <?php endforeach; ?>
                                             </select>
                                             
-                                            <!-- Selector de Docente con Validación de Superposición -->
-                                            <select name="clase[<?= $mod['id'] ?>][<?= $dia ?>][docente]" class="form-select select-mini border-success">
-                                                <option value="">- Docente -</option>
-                                                <?php foreach ($docentes as $doc): ?>
+                                            <!-- Selector de Docente -->
+                                            <select name="clase[<?= $mod['id'] ?>][<?=$dia ?>][docente]" class="form-select select-mini border-success">
+                                                <option value="">-- Docente --</option>
+                                                <?php foreach ($docentes as$doc): ?>
                                                     <?php 
-                                                        $es_docente_actual = ($doc_id == $doc['id']);
-                                                        $ocupacion = $docentes_ocupados[$doc['id']][$mod['id']][$dia] ?? null;
+                                                        $es_docente_actual = ($doc_id == $doc['id']);$ocupacion = $docentes_ocupados[$doc['id']][$mod['id']][$dia] ?? null;
                                                         
-                                                        // Si está ocupado en otro lado, bloqueamos la opción
                                                         if ($ocupacion && !$es_docente_actual): ?>
                                                             <option value="" disabled class="bg-light text-danger fw-bold">
                                                                 ❌ <?= htmlspecialchars($doc['apellido']) ?> (Ocupado en <?= htmlspecialchars($ocupacion) ?>)
                                                             </option>
-                                                        <?php else: ?>
+                                                    <?php else: ?>
                                                             <option value="<?= $doc['id'] ?>" <?= $es_docente_actual ? 'selected' : '' ?>>
-                                                                <?= htmlspecialchars($doc['apellido'] . ', ' . $doc['nombre']) ?>
+                                                                <?= htmlspecialchars($doc['apellido'] . ', ' .$doc['nombre']) ?>
                                                             </option>
-                                                        <?php endif; ?>
+                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </select>
                                         </td>
@@ -267,14 +262,10 @@ if ($grupo_id) {
                                 </tr>
 
                                 <?php 
-                                // LOGICA DE RECREO: Calcular minutos entre el fin de este módulo y el inicio del siguiente
-                                if ($i < $num_modulos - 1) {
-                                    $mod_next = $modulos[$i + 1];
-                                    $fin_actual = strtotime($mod['hora_fin']);
-                                    $inicio_siguiente = strtotime($mod_next['hora_inicio']);
-                                    $diff_min = round(($inicio_siguiente - $fin_actual) / 60);
+                                // LOGICA DE RECREO CORREGIDA
+                                if ($i <$num_modulos - 1) {
+                                    $mod_next =$modulos[$i + 1];$fin_actual = strtotime($mod['hora_fin']);$inicio_siguiente = strtotime($mod_next['hora_inicio']);$diff_min = round(($inicio_siguiente -$fin_actual) / 60);
 
-                                    // Si hay espacio de tiempo mayor a 0 minutos, mostrar franja de recreo
                                     if ($diff_min > 0) {
                                         echo "<tr class='fila-recreo'>";
                                         echo "<td colspan='6' class='text-center py-2'> RECREO ({$diff_min} MINUTOS)</td>";
@@ -287,14 +278,112 @@ if ($grupo_id) {
                     </tbody>
                 </table>
 
-                <div class="d-flex justify-content-end gap-2 mt-4">
-                    <button type="submit" onclick="document.getElementById('estado_grilla_input').value='Borrador'" class="btn btn-warning px-4 fw-bold">Guardar Borrador</button>
-                    <button type="submit" onclick="document.getElementById('estado_grilla_input').value='Confirmado'" class="btn btn-success px-4 fw-bold">Confirmar Grilla</button>
+                <!-- NUEVA DISPOSICIÓN DE BOTONES -->
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <!-- Botones Izquierdos (Vaciado) -->
+                    <div class="d-flex gap-2">
+                        <button type="button" id="btnVaciar" class="btn btn-outline-danger fw-bold">Vaciar Tabla</button>
+                        <button type="button" id="btnDeshacer" class="btn btn-outline-secondary fw-bold" style="display: none;">Volver Atrás</button>
+                    </div>
+
+                    <!-- Botones Derechos (Guardado) -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" onclick="document.getElementById('estado_grilla_input').value='Borrador'; return true;" class="btn btn-warning px-4 fw-bold">Guardar Borrador</button>
+                        <!-- ValidarReglas() intercepta el Confirmar -->
+                        <button type="submit" onclick="document.getElementById('estado_grilla_input').value='Confirmado'; return validarReglas();" class="btn btn-success px-4 fw-bold">Confirmar Grilla</button>
+                    </div>
                 </div>
             </div>
         </form>
     <?php endif; ?>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SCRIPTS PARA LOS BOTONES NUEVOS Y REGLAMENTOS -->
+<script>
+    // 1. Lógica para Vaciar Tabla y Volver Atrás
+    let estadoAnterior = {};
+    const btnVaciar = document.getElementById('btnVaciar');
+    const btnDeshacer = document.getElementById('btnDeshacer');
+    const selectsFormulario = document.querySelectorAll('select.select-mini');
+
+    if (btnVaciar && btnDeshacer) {
+        btnVaciar.addEventListener('click', () => {
+            estadoAnterior = {}; 
+            selectsFormulario.forEach(sel => {
+                estadoAnterior[sel.name] = sel.value; // Respaldar valores
+                sel.value = ""; // Limpiar todos
+            });
+            btnVaciar.style.display = 'none';
+            btnDeshacer.style.display = 'inline-block';
+        });
+
+        btnDeshacer.addEventListener('click', () => {
+            selectsFormulario.forEach(sel => {
+                if(estadoAnterior[sel.name] !== undefined) {
+                    sel.value = estadoAnterior[sel.name]; // Restaurar
+                }
+            });
+            btnDeshacer.style.display = 'none';
+            btnVaciar.style.display = 'inline-block';
+        });
+        
+        // Si el usuario cambia algo manualmente tras vaciar, ocultar el botón de deshacer para evitar mezclas raras
+        selectsFormulario.forEach(sel => {
+            sel.addEventListener('change', () => {
+                if (btnDeshacer.style.display === 'inline-block') {
+                    btnDeshacer.style.display = 'none';
+                    btnVaciar.style.display = 'inline-block';
+                }
+            });
+        });
+    }
+
+    // 2. Lógica para validar que las materias técnicas no queden aisladas
+    function validarReglas() {
+        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        let errores = [];
+
+        dias.forEach(dia => {
+            let conteoMateriasDia = {};
+            
+            // Buscar todas las materias asignadas en la columna de este día
+            let selectsDia = document.querySelectorAll(`select[name*="[${dia}][materia]"]`);
+            
+            selectsDia.forEach(sel => {
+                let idMateria = sel.value;
+                if (idMateria !== "") {
+                    let optionSeleccionado = sel.options[sel.selectedIndex];
+                    let tipo = optionSeleccionado.getAttribute('data-tipo') || '';
+                    let nombre = optionSeleccionado.text;
+                    
+                    if (!conteoMateriasDia[idMateria]) {
+                        conteoMateriasDia[idMateria] = { conteo: 0, tipo: tipo, nombre: nombre };
+                    }
+                    conteoMateriasDia[idMateria].conteo++;
+                }
+            });
+
+            // Analizar si en este día la materia rompe el reglamento
+            for (let id in conteoMateriasDia) {
+                let mat = conteoMateriasDia[id];
+                // Si es del bloque técnico o específico y aparece 1 sola vez en el día
+                if ((mat.tipo.includes('Técnico Profesional') || mat.tipo.includes('Técnico Tecnológico')) && mat.conteo === 1) {
+                    errores.push(`- ${mat.nombre} (${dia}) tiene una hora aislada. Según reglamento, debe dictarse en bloques agrupados.`);
+                }
+            }
+        });
+
+        if (errores.length > 0) {
+            alert("Atención - Infracción de Reglamentos:\n\n" + errores.join("\n") + "\n\nPor favor, agrupa estas materias o utiliza 'Guardar Borrador' si aún no has terminado.");
+            return false; // Interrumpe el Submit (No guarda)
+        }
+        
+        return true; // Continúa con el submit a la BD
+    }
+</script>
+
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>

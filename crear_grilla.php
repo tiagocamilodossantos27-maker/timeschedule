@@ -210,6 +210,6 @@ if ($grupo_id) {
         </form>
     <?php endif; ?>
 </div>
-
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>

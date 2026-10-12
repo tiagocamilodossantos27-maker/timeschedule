@@ -60,11 +60,83 @@ $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
         .materia-title { font-weight: bold; font-size: 0.9rem; color: #0d6efd; }
         .docente-name { font-size: 0.8rem; color: #495057; }
         .fila-recreo { background-color: #e9ecef; color: #495057; font-weight: bold; font-size: 0.9rem; letter-spacing: 2px; }
+        
+        /* REGLAS EXCLUSIVAS PARA LA IMPRESIÓN */
+        @media print {
+            @page {
+                size: A4 landscape; /* Fuerza tamaño A4 en horizontal */
+                margin: 0mm; /* TRUCO: Margen 0 elimina la fecha, URL y número de página automáticamente */
+            }
+            
+            body { 
+                background-color: #fff !important; 
+                margin: 1cm !important; /* Añadimos margen al body para no pegar la tabla al borde del papel */
+                padding: 0 !important; 
+            }
+
+            .no-imprimir { 
+                display: none !important; 
+            } /* Oculta todo lo que tenga esta clase */
+            
+            .container, .table-responsive { 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+            }
+
+            .card { 
+                border: none !important; 
+                box-shadow: none !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+            }
+            
+            /* Compactar la tabla para asegurar que entre en 1 hoja */
+            table { 
+                font-size: 0.8rem !important; 
+                margin-bottom: 0 !important; 
+            }
+            
+            td { 
+                height: auto !important; 
+                padding: 4px 2px !important; /* Reduce los espacios internos de las celdas */
+            }
+
+            .table-dark th { 
+                background-color: #212529 !important; 
+                color: white !important; 
+                padding: 4px !important;
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
+            
+            .fila-recreo { 
+                background-color: #e9ecef !important; 
+                font-size: 0.75rem !important;
+                padding: 2px !important;
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
+            
+            .materia-title { 
+                color: #000 !important; /* Para que se lea mejor en blanco y negro */
+                font-size: 0.8rem !important; 
+            }
+            .docente-name { 
+                font-size: 0.7rem !important; 
+            }
+            h4 { 
+                font-size: 1.1rem !important; 
+                margin-bottom: 10px !important; 
+            }
+        }
     </style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-dark mb-4">
+<!-- Se agregó la clase "no-imprimir" para ocultar la barra al imprimir -->
+<nav class="navbar navbar-dark bg-dark mb-4 no-imprimir">
     <div class="container">
         <a class="navbar-brand fw-bold" href="index.php">TimeSchedule</a>
         <a href="index.php" class="btn btn-outline-light btn-sm">Volver al Inicio</a>
@@ -72,7 +144,8 @@ $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 </nav>
 
 <div class="container">
-    <div class="card shadow-sm border-0 mb-4 p-3">
+    <!-- Se agregó la clase "no-imprimir" para ocultar el selector de grupos al imprimir -->
+    <div class="card shadow-sm border-0 mb-4 p-3 no-imprimir">
         <form method="GET" class="row align-items-center">
             <label class="col-auto fw-bold">Seleccionar Curso / Grupo:</label>
             <div class="col-md-4">
@@ -89,13 +162,22 @@ $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
     <?php if ($grupoActual): ?>
         <div class="table-responsive shadow-sm bg-white p-3 rounded">
+            
             <h4 class="text-center fw-bold mb-3">CURSO: <?= htmlspecialchars($grupoActual['nombre_grupo']) ?> - <?= $grupoActual['turno'] ?></h4>
             
             <?php if (!$grillaConfirmada): ?>
-                <div class="alert alert-warning text-center fw-bold py-4 mb-0">
+                <div class="alert alert-warning text-center fw-bold py-4 mb-0 no-imprimir">
                     Este grupo aún no cuenta con una grilla confirmada disponible para la visualización pública.
                 </div>
             <?php else: ?>
+                
+                <!-- NUEVO BOTÓN DE IMPRESIÓN (Solo aparece si la grilla está confirmada) -->
+                <div class="d-flex justify-content-end mb-3 no-imprimir">
+                    <button onclick="window.print()" class="btn btn-primary fw-bold shadow-sm">
+                        Imprimir Grilla
+                    </button>
+                </div>
+                
                 <table class="table table-bordered text-center align-middle mb-0">
                     <thead class="table-dark">
                         <tr>

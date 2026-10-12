@@ -77,6 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
-
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>

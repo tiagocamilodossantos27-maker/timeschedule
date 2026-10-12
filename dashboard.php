@@ -87,6 +87,6 @@ $nombre = $_SESSION['usuario_nombre'];
         <?php endif; ?>
     </div>
 </div>
-
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>

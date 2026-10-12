@@ -68,6 +68,17 @@ $docentes = $pdo->query("SELECT * FROM docentes ORDER BY apellido ASC, nombre AS
 $modulos = $pdo->query("SELECT * FROM modulos_horarios ORDER BY hora_inicio ASC")->fetchAll();
 $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
+// --- NUEVO: Obtener la información completa del docente seleccionado ---
+$info_docente_seleccionado = null;
+if ($docente_seleccionado) {
+    foreach ($docentes as $d) {
+        if ($d['id'] == $docente_seleccionado) {
+            $info_docente_seleccionado = $d;
+            break;
+        }
+    }
+}
+
 // Cargar horario unificado del docente
 $horario_escuela = [];
 $horario_externo = [];
@@ -128,9 +139,11 @@ if ($docente_seleccionado) {
     <?php endif; ?>
 
     <div class="row">
-        <!-- Registrar Docente -->
+        <!-- Columna Izquierda: Registrar e Información Docente -->
         <div class="col-md-3 mb-4">
-            <div class="card shadow-sm border-0">
+            
+            <!-- Tarjeta Registrar Docente -->
+            <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-success text-white fw-bold">Registrar Docente</div>
                 <div class="card-body">
                     <form method="POST">
@@ -142,7 +155,6 @@ if ($docente_seleccionado) {
                         <button type="submit" name="crear_docente" class="btn btn-success w-100 btn-sm fw-bold">Guardar Docente</button>
                     </form>
                     
-                    <!-- AQUÍ ESTÁ LA LISTA AÑADIDA IDÉNTICA A LA DE CATÁLOGO -->
                     <hr>
                     <ul class="list-group list-group-flush small overflow-auto" style="max-height: 250px;">
                         <?php foreach ($docentes as $d): ?>
@@ -152,10 +164,46 @@ if ($docente_seleccionado) {
                             </li>
                         <?php endforeach; ?>
                     </ul>
-                    <!-- FIN DE LA LISTA -->
-                    
                 </div>
             </div>
+
+            <!-- --- NUEVO: Tarjeta de Información del Docente Seleccionado --- -->
+            <?php if ($info_docente_seleccionado): ?>
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-info text-white fw-bold">Información Docente</div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-0">Cédula</label>
+                            <div class="fw-bold"><?= htmlspecialchars($info_docente_seleccionado['ci']) ?></div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-0">Nombre</label>
+                            <div class="fw-bold"><?= htmlspecialchars($info_docente_seleccionado['nombre']) ?></div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-0">Apellido</label>
+                            <div class="fw-bold"><?= htmlspecialchars($info_docente_seleccionado['apellido']) ?></div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-0">Correo</label>
+                            <div class="fw-bold"><?= !empty($info_docente_seleccionado['correo']) ? htmlspecialchars($info_docente_seleccionado['correo']) : 'No registrado' ?></div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-muted mb-0">Teléfono</label>
+                            <div class="fw-bold"><?= !empty($info_docente_seleccionado['telefono']) ? htmlspecialchars($info_docente_seleccionado['telefono']) : 'No registrado' ?></div>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <!-- Estado por defecto si no hay docente seleccionado -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-secondary text-white fw-bold">Información Docente</div>
+                    <div class="card-body text-center text-muted small py-4">
+                        Seleccione un docente en el panel de horarios para ver su información detallada.
+                    </div>
+                </div>
+            <?php endif; ?>
+
         </div>
 
         <!-- Tabla de Horarios del Docente -->
@@ -268,6 +316,6 @@ if ($docente_seleccionado) {
         </div>
     </div>
 </div>
-
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>

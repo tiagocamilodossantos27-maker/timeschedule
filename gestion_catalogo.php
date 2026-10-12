@@ -14,9 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1. Crear Materia
     if (isset($_POST['crear_materia'])) {
         $nombre = trim($_POST['nombre_materia']);
-        if (!empty($nombre)) {
-            $stmt = $pdo->prepare("INSERT IGNORE INTO materias (nombre) VALUES (?)");
-            $stmt->execute([$nombre]);
+        $tipo = trim($_POST['tipo_materia']); // Nuevo campo capturado
+        
+        if (!empty($nombre) && !empty($tipo)) {
+            // Se actualiza el INSERT para incluir el tipo
+            $stmt = $pdo->prepare("INSERT IGNORE INTO materias (nombre, tipo) VALUES (?, ?)");
+            $stmt->execute([$nombre, $tipo]);
             $mensaje = "Materia agregada correctamente.";
         }
     }
@@ -123,13 +126,30 @@ $grupos = $pdo->query("SELECT * FROM grupos ORDER BY nombre_grupo ASC")->fetchAl
                             <label class="form-label small fw-bold">Nombre de la Materia</label>
                             <input type="text" name="nombre_materia" class="form-control form-control-sm" required>
                         </div>
+                        <!-- NUEVO SELECT PARA EL TIPO DE MATERIA -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Tipo de Espacio Curricular</label>
+                            <select name="tipo_materia" class="form-select form-select-sm" required>
+                                <option value="">Seleccione el tipo...</option>
+                                <option value="Equivalente / Común">Equivalente / Común</option>
+                                <option value="Técnico Profesional / Específica">Técnico Profesional / Específica</option>
+                                <option value="Autonomía Curricular">Autonomía Curricular</option>
+                            </select>
+                        </div>
                         <button type="submit" name="crear_materia" class="btn btn-primary btn-sm w-100 fw-bold">Guardar Materia</button>
                     </form>
                     <hr>
                     <ul class="list-group list-group-flush small overflow-auto" style="max-height: 200px;">
                         <?php foreach ($materias as $m): ?>
                             <li class="list-group-item d-flex justify-content-between align-items-center px-1">
-                                <?= htmlspecialchars($m['nombre']) ?>
+                                <div>
+                                    <?= htmlspecialchars($m['nombre']) ?>
+                                    <br>
+                                    <!-- MUESTRA EL TIPO CON UN BADGE VISUAL -->
+                                    <span class="badge bg-secondary" style="font-size: 0.75em; font-weight: normal;">
+                                        <?= htmlspecialchars($m['tipo'] ?? 'Sin asignar') ?>
+                                    </span>
+                                </div>
                                 <a href="gestion_catalogo.php?eliminar_materia=<?= $m['id'] ?>" class="btn btn-sm btn-outline-danger py-0" onclick="return confirm('¿Eliminar materia?')">X</a>
                             </li>
                         <?php endforeach; ?>
@@ -208,5 +228,6 @@ $grupos = $pdo->query("SELECT * FROM grupos ORDER BY nombre_grupo ASC")->fetchAl
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>

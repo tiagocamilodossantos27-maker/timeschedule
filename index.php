@@ -42,6 +42,6 @@
         </div>
     </div>
 </div>
-
+<?php include 'includes/chatbot_ui.php'; ?>
 </body>
 </html>
