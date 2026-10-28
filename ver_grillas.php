@@ -2,7 +2,13 @@
 require_once 'config/conexion.php';
 
 $grupo_id = $_GET['grupo_id'] ?? null;
-$grupos = $pdo->query("SELECT * FROM grupos ORDER BY nombre_grupo ASC")->fetchAll();
+
+// MODIFICACIÓN: Mostrar únicamente los grupos que poseen al menos una grilla en estado 'Confirmado'
+$sqlGruposConGrillaConfirmada = "SELECT DISTINCT g.* FROM grupos g
+                                  JOIN grillas gr ON g.id = gr.grupo_id
+                                  WHERE gr.estado = 'Confirmado'
+                                  ORDER BY g.nombre_grupo ASC";
+$grupos = $pdo->query($sqlGruposConGrillaConfirmada)->fetchAll();
 
 if (!$grupo_id && count($grupos) > 0) {
     $grupo_id = $grupos[0]['id'];
@@ -135,7 +141,6 @@ $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 </head>
 <body class="bg-light">
 
-<!-- Se agregó la clase "no-imprimir" para ocultar la barra al imprimir -->
 <nav class="navbar navbar-dark bg-dark mb-4 no-imprimir">
     <div class="container">
         <a class="navbar-brand fw-bold" href="index.php">TimeSchedule</a>
@@ -144,17 +149,20 @@ $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 </nav>
 
 <div class="container">
-    <!-- Se agregó la clase "no-imprimir" para ocultar el selector de grupos al imprimir -->
     <div class="card shadow-sm border-0 mb-4 p-3 no-imprimir">
         <form method="GET" class="row align-items-center">
             <label class="col-auto fw-bold">Seleccionar Curso / Grupo:</label>
             <div class="col-md-4">
                 <select name="grupo_id" class="form-select" onchange="this.form.submit()">
-                    <?php foreach ($grupos as $g): ?>
-                        <option value="<?= $g['id'] ?>" <?= $g['id'] == $grupo_id ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($g['nombre_grupo']) ?> (<?= $g['turno'] ?>)
-                        </option>
-                    <?php endforeach; ?>
+                    <?php if (empty($grupos)): ?>
+                        <option value="">No hay grillas confirmadas disponibles</option>
+                    <?php else: ?>
+                        <?php foreach ($grupos as $g): ?>
+                            <option value="<?= $g['id'] ?>" <?= $g['id'] == $grupo_id ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($g['nombre_grupo']) ?> (<?= $g['turno'] ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </select>
             </div>
         </form>
@@ -171,7 +179,6 @@ $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
                 </div>
             <?php else: ?>
                 
-                <!-- NUEVO BOTÓN DE IMPRESIÓN (Solo aparece si la grilla está confirmada) -->
                 <div class="d-flex justify-content-end mb-3 no-imprimir">
                     <button onclick="window.print()" class="btn btn-primary fw-bold shadow-sm">
                         Imprimir Grilla

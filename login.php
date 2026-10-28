@@ -14,13 +14,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $usuario = $stmt->fetch();
 
         if ($usuario && password_verify($password, $usuario['password_hash'])) {
-            // Guardar datos en la sesión
-            $_SESSION['usuario_id'] = $usuario['id'];
-            $_SESSION['usuario_nombre'] = $usuario['nombre'] . ' ' . $usuario['apellido'];
-            $_SESSION['usuario_rol'] = $usuario['rol'];
+            
+            // RESTRICCIÓN DE SESIÓN ÚNICA SIMULTÁNEA
+            // Verificamos si ya tiene un session_id activo en la BD y si esa sesión sigue viva (opcionalmente podríamos validar, 
+            // pero si tiene valor y es distinto al actual, significa que está abierto en otra parte).
+            if (!empty($usuario['session_id'])) {
+                // Comprobamos si la sesión guardada pertenece a otra pestaña/dispositivo activo
+                // Una forma limpia es bloquear el ingreso directo:
+                $error = "⚠️ Este usuario ya tiene una sesión activa en otro dispositivo o pestaña. Debe cerrar sesión primero en el otro lugar.";
+            } else {
+                // Guardar datos en la sesión PHP
+                $_SESSION['usuario_id'] = $usuario['id'];
+                $_SESSION['usuario_nombre'] = $usuario['nombre'] . ' ' . $usuario['apellido'];
+                $_SESSION['usuario_rol'] = $usuario['rol'];
 
-            header("Location: dashboard.php");
-            exit;
+                // Registrar el ID de sesión actual en la base de datos para bloquear duplicados
+                $sessionIdActual = session_id();
+                $updateSesion = $pdo->prepare("UPDATE usuarios SET session_id = ? WHERE id = ?");
+                $updateSesion->execute([$sessionIdActual, $usuario['id']]);
+
+                header("Location: dashboard.php");
+                exit;
+            }
+
         } else {
             $error = "Cédula o contraseña incorrectas.";
         }
@@ -73,7 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </form>
                 </div>
             </div>
-            <p class="text-center text-muted small mt-3">Prueba con CI: <code>11111111</code> / Contraseña: <code>123456</code></p>
+            
+            <!-- INFORMACIÓN DE CREDENCIALES ABAJO -->
+            <div class="text-center text-muted small mt-3">
+                <p class="mb-1"><strong>María Galarza:</strong> CI: <code>11111111</code> / Contraseña: <code>123456</code></p>
+                <p class="mb-0"><strong>Administrativo 2:</strong> CI: <code>22222222</code> / Contraseña: <code>admin2password</code></p>
+            </div>
         </div>
     </div>
 </div>

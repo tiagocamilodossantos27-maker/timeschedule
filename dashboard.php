@@ -53,7 +53,7 @@ $nombre = $_SESSION['usuario_nombre'];
                 <div class="card h-100 shadow-sm border-0">
                     <div class="card-body">
                         <h5 class="card-title text-info">Gestión de Materias, Docentes y Grupos</h5>
-                        <p class="card-text text-muted">Registra grupos (ej: 3° MF-BT), docentes con su información personal y materias.</p>
+                        <p class="card-text text-muted">Registra grupos, docentes con su información personal y materias.</p>
                         <a href="gestion_catalogo.php" class="btn btn-info btn-sm text-white">Gestionar Oferta</a>
                     </div>
                 </div>

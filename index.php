@@ -15,26 +15,39 @@
     </div>
 
     <div class="row justify-content-center g-4">
-        <!-- Opción 1: Visualización Pública -->
-        <div class="col-md-5">
+        <!-- Opción 1: Visualización Pública de Grillas por Curso -->
+        <div class="col-md-4">
             <div class="card h-100 shadow border-0 py-4 px-3">
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div>
                         <h3 class="card-title text-success fw-bold mb-3">Consultar Grillas Horarias</h3>
-                        <p class="card-text text-muted">Acceso rápido para adscriptos. Consulta las grillas horarias por curso.</p>
+                        <p class="card-text text-muted">Acceso rápido para adscriptos, consulta las grillas horarias por curso.</p>
                     </div>
                     <a href="ver_grillas.php" class="btn btn-success btn-lg mt-4">Ver Grillas Horarias</a>
                 </div>
             </div>
         </div>
 
-        <!-- Opción 2: Gestión Administrativa -->
-        <div class="col-md-5">
+        <!-- Opción 2: Horarios Semanales de Docentes -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow border-0 py-4 px-3">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <h3 class="card-title text-info fw-bold mb-3">Horarios de Docentes</h3>
+                        <p class="card-text text-muted">Acceso rápido para adscriptos, consulta e impresión de los horarios semanales individuales de los docentes.</p>
+                    </div>
+                    <a href="ver_horarios_docentes.php" class="btn btn-info btn-lg mt-4 text-white">Ver Horarios de Docentes</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opción 3: Gestión Administrativa -->
+        <div class="col-md-4">
             <div class="card h-100 shadow border-0 py-4 px-3">
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div>
                         <h3 class="card-title text-primary fw-bold mb-3">Acceso Administrativo</h3>
-                        <p class="card-text text-muted">Panel exclusivo para el personal administrativo. Creación de grillas y disponibilidad docente.</p>
+                        <p class="card-text text-muted">Panel exclusivo para el personal administrativo, creación de grillas, disponibilidad docente y más.</p>
                     </div>
                     <a href="login.php" class="btn btn-primary btn-lg mt-4">Iniciar Sesión</a>
                 </div>
