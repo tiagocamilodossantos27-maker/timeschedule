@@ -15,7 +15,7 @@
 
 <div id="chatbot-container">
     <div id="chatbot-header">
-        <span>Asistente IA</span>
+        <span>Asistente TimeSchedule</span>
         <button type="button" class="btn-close btn-close-white" onclick="toggleChat()" style="font-size: 0.8rem;"></button>
     </div>
     <div id="chatbot-messages">
