@@ -15,27 +15,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($usuario && password_verify($password, $usuario['password_hash'])) {
             
-            // RESTRICCIÓN DE SESIÓN ÚNICA SIMULTÁNEA
-            // Verificamos si ya tiene un session_id activo en la BD y si esa sesión sigue viva (opcionalmente podríamos validar, 
-            // pero si tiene valor y es distinto al actual, significa que está abierto en otra parte).
-            if (!empty($usuario['session_id'])) {
-                // Comprobamos si la sesión guardada pertenece a otra pestaña/dispositivo activo
-                // Una forma limpia es bloquear el ingreso directo:
-                $error = "⚠️ Este usuario ya tiene una sesión activa en otro dispositivo o pestaña. Debe cerrar sesión primero en el otro lugar.";
-            } else {
-                // Guardar datos en la sesión PHP
-                $_SESSION['usuario_id'] = $usuario['id'];
-                $_SESSION['usuario_nombre'] = $usuario['nombre'] . ' ' . $usuario['apellido'];
-                $_SESSION['usuario_rol'] = $usuario['rol'];
+            // Guardar datos en la sesión PHP
+            $_SESSION['usuario_id'] = $usuario['id'];
+            $_SESSION['usuario_nombre'] = $usuario['nombre'] . ' ' . $usuario['apellido'];
+            $_SESSION['usuario_rol'] = $usuario['rol'];
 
-                // Registrar el ID de sesión actual en la base de datos para bloquear duplicados
-                $sessionIdActual = session_id();
-                $updateSesion = $pdo->prepare("UPDATE usuarios SET session_id = ? WHERE id = ?");
-                $updateSesion->execute([$sessionIdActual, $usuario['id']]);
+            // Registrar el ID de sesión actual en la base de datos.
+            // Si tenía una sesión colgada anterior, se sobrescribe automáticamente sin bloquear al usuario.
+            $sessionIdActual = session_id();
+            $updateSesion = $pdo->prepare("UPDATE usuarios SET session_id = ? WHERE id = ?");
+            $updateSesion->execute([$sessionIdActual, $usuario['id']]);
 
-                header("Location: dashboard.php");
-                exit;
-            }
+            header("Location: dashboard.php");
+            exit;
 
         } else {
             $error = "Cédula o contraseña incorrectas.";

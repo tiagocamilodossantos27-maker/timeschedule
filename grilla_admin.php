@@ -197,15 +197,15 @@ if ($grupo_id) {
     </div>
 
     <?php if ($grupoActual): ?>
-        <!-- PANEL DE CONTROL DE CUPO DE HORAS POR DOCENTE -->
+        <!-- PANEL DE CONTROL DE CUPO DE HORAS POR MATERIA -->
         <div class="card shadow-sm border-0 mb-4 p-3 bg-white no-imprimir">
-            <h5 class="fw-bold text-secondary mb-2" style="font-size: 1rem;">Control de Cupo de Horas por Docente</h5>
+            <h5 class="fw-bold text-secondary mb-2" style="font-size: 1rem;">Control de Cupo de Horas por Materia</h5>
             <div class="row g-2 align-items-center">
                 <div class="col-md-4">
-                    <select id="selectDocenteCupo" class="form-select form-select-sm">
-                        <option value="">-- Seleccione Docente --</option>
-                        <?php foreach ($docentes as $doc): ?>
-                            <option value="<?= $doc['id'] ?>"><?= htmlspecialchars($doc['apellido'] . ', ' . $doc['nombre']) ?></option>
+                    <select id="selectMateriaCupo" class="form-select form-select-sm">
+                        <option value="">-- Seleccione Materia --</option>
+                        <?php foreach ($materias as $mat): ?>
+                            <option value="<?= $mat['id'] ?>"><?= htmlspecialchars($mat['nombre']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -236,8 +236,8 @@ if ($grupo_id) {
                             <th style="width: 13%;" class="p-2">
                                 <select name="turno" class="form-select form-select-sm fw-bold border-dark text-center no-imprimir" onchange="window.location.href='grilla_admin.php?grupo_id=<?= $grupo_id ?>&turno=' + this.value">
                                     <option value="Turno 1" <?= $turno_seleccionado == 'Turno 1' ? 'selected' : '' ?>>TURNO 1</option>
-                                    <option value="Turno 2" <?= $turno_seleccionado == 'Turno 2' ? 'selected' : '' ?>>TURNO 2</option>
                                     <option value="Turno 3" <?= $turno_seleccionado == 'Turno 3' ? 'selected' : '' ?>>TURNO 3</option>
+                                    <option value="Turno 5" <?= $turno_seleccionado == 'Turno 5' ? 'selected' : '' ?>>TURNO 5</option>
                                 </select>
                                 <span class="d-none d-print-inline">TURNO</span>
                             </th>
@@ -269,7 +269,7 @@ if ($grupo_id) {
                                         ?>
                                         <td class="p-1 align-middle">
                                             <!-- Selector de Materia -->
-                                            <select name="clase[<?= $mod['id'] ?>][<?= $dia ?>][materia]" class="form-select select-mini border-primary text-uppercase fw-bold select-materia" onchange="filtrarDocentesPorMateria(this)">
+                                            <select name="clase[<?= $mod['id'] ?>][<?= $dia ?>][materia]" class="form-select select-mini border-primary text-uppercase fw-bold select-materia" onchange="filtrarDocentesPorMateria(this); controlarCupoHorasMateria(this);">
                                                 <option value="">-- Materia --</option>
                                                 <?php foreach ($materias as $mat): ?>
                                                     <option value="<?= $mat['id'] ?>" data-tipo="<?= htmlspecialchars($mat['tipo'] ?? '') ?>" <?= $mat_id == $mat['id'] ? 'selected' : '' ?>>
@@ -279,7 +279,7 @@ if ($grupo_id) {
                                             </select>
 
                                             <!-- Selector de Docente -->
-                                            <select name="clase[<?= $mod['id'] ?>][<?= $dia ?>][docente]" class="form-select select-mini border-success select-docente" onchange="filtrarMateriasPorDocente(this); controlarCupoHoras(this);">
+                                            <select name="clase[<?= $mod['id'] ?>][<?= $dia ?>][docente]" class="form-select select-mini border-success select-docente" onchange="filtrarMateriasPorDocente(this);">
                                                 <option value="">-- Docente --</option>
                                                 <?php foreach ($docentes as $doc): ?>
                                                     <?php 
@@ -298,6 +298,22 @@ if ($grupo_id) {
                                         </td>
                                     <?php endforeach; ?>
                                 </tr>
+
+                                <?php 
+                                // LÓGICA DE RECREO IDÉNTICA A ver_grillas.php
+                                if ($i < $num_modulos - 1) {
+                                    $mod_next = $modulos[$i + 1];
+                                    $fin_actual = strtotime($mod['hora_fin']);
+                                    $inicio_siguiente = strtotime($mod_next['hora_inicio']);
+                                    $diff_min = round(($inicio_siguiente - $fin_actual) / 60);
+
+                                    if ($diff_min > 0) {
+                                        echo "<tr class='fila-recreo'>";
+                                        echo "<td colspan='6' class='text-center py-2'>RECREO ({$diff_min} MINUTOS)</td>";
+                                        echo "</tr>";
+                                    }
+                                }
+                                ?>
                             <?php endfor; ?>
                         <?php endif; ?>
                     </tbody>
@@ -326,18 +342,16 @@ if ($grupo_id) {
     // 1. Detección de cambios sin guardar para el botón "Volver al Panel de Control"
     let grillaModificada = false;
 
-    // Detectar cualquier cambio en los selectores de materias o docentes
     document.querySelectorAll('select.select-mini').forEach(sel => {
         sel.addEventListener('change', () => { 
             grillaModificada = true; 
         });
     });
 
-    // Interceptar el clic en "Volver al Panel"
     document.getElementById('btnVolverPanel').addEventListener('click', function(e) {
         if (grillaModificada) {
-            if (!confirm("⚠️ ¡Atención!\nTiene cambios sin guardar en esta grilla. Si sale ahora perderá el progreso.\n\n¿Desea volver al panel de control de todas formas?")) {
-                e.preventDefault(); // Cancela la navegación si el usuario elige quedarse
+            if (!confirm("⚠️ ¡Atención!\nTiene cambios sin guardar en esta grilla. Si sale ahora perderá el progreso.\n\n¿Desea volver al panel de control de todos formas?")) {
+                e.preventDefault();
             }
         }
     });
@@ -374,36 +388,36 @@ if ($grupo_id) {
         });
     }
 
-    // 3. Sistema de Control de Cupo de Horas por Docente
-    let cuposDocentes = {};
+    // 3. Sistema de Control de Cupo de Horas por Materia
+    let cuposMaterias = {};
 
     document.getElementById('btnAddCupo').addEventListener('click', () => {
-        let docId = document.getElementById('selectDocenteCupo').value;
+        let matId = document.getElementById('selectMateriaCupo').value;
         let horas = parseInt(document.getElementById('inputHorasCupo').value);
-        let selectDoc = document.getElementById('selectDocenteCupo');
-        let nombreDoc = selectDoc.options[selectDoc.selectedIndex].text;
+        let selectMat = document.getElementById('selectMateriaCupo');
+        let nombreMat = selectMat.options[selectMat.selectedIndex].text;
 
-        if (!docId || !horas || horas <= 0) {
-            alert("Seleccione un docente y un número de horas válido.");
+        if (!matId || !horas || horas <= 0) {
+            alert("Seleccione una materia y un número de horas válido.");
             return;
         }
 
-        cuposDocentes[docId] = {
+        cuposMaterias[matId] = {
             total: horas,
-            usados: contarHorasUsadasDocente(docId),
-            nombre: nombreDoc
+            usados: contarHorasUsadasMateria(matId),
+            nombre: nombreMat
         };
 
         renderizarBadgesCupos();
         document.getElementById('inputHorasCupo').value = '';
-        selectDoc.value = '';
+        selectMat.value = '';
         recalcularTodosLosCupos();
     });
 
-    function contarHorasUsadasDocente(docId) {
+    function contarHorasUsadasMateria(matId) {
         let count = 0;
-        document.querySelectorAll('select.select-docente').forEach(sel => {
-            if (sel.value === docId) count++;
+        document.querySelectorAll('select.select-materia').forEach(sel => {
+            if (sel.value === matId) count++;
         });
         return count;
     }
@@ -411,8 +425,8 @@ if ($grupo_id) {
     function renderizarBadgesCupos() {
         let contenedor = document.getElementById('listaCuposAsignados');
         contenedor.innerHTML = '';
-        for (let id in cuposDocentes) {
-            let c = cuposDocentes[id];
+        for (let id in cuposMaterias) {
+            let c = cuposMaterias[id];
             let restante = c.total - c.usados;
             let badgeClass = restante < 0 ? 'bg-danger' : (restante === 0 ? 'bg-success' : 'bg-primary');
 
@@ -424,32 +438,33 @@ if ($grupo_id) {
     }
 
     function reiniciarContadoresCupo() {
-        for (let id in cuposDocentes) {
-            cuposDocentes[id].usados = 0;
+        for (let id in cuposMaterias) {
+            cuposMaterias[id].usados = 0;
         }
         renderizarBadgesCupos();
     }
 
     function recalcularTodosLosCupos() {
-        for (let id in cuposDocentes) {
-            cuposDocentes[id].usados = contarHorasUsadasDocente(id);
+        for (let id in cuposMaterias) {
+            cuposMaterias[id].usados = contarHorasUsadasMateria(id);
         }
         renderizarBadgesCupos();
     }
 
-    function controlarCupoHoras(selectDocente) {
-        let docId = selectDocente.value;
-        if (!docId) {
+    function controlarCupoHorasMateria(selectMateria) {
+        let matId = selectMateria.value;
+        if (!matId) {
             recalcularTodosLosCupos();
             return;
         }
 
-        if (cuposDocentes[docId]) {
-            let c = cuposDocentes[docId];
-            let usadosActuales = contarHorasUsadasDocente(docId);
+        if (cuposMaterias[matId]) {
+            let c = cuposMaterias[matId];
+            let usadosActuales = contarHorasUsadasMateria(matId);
             if (usadosActuales > c.total) {
-                alert(`⚠️ Límite de horas alcanzado para el docente ${c.nombre}. Tiene asignadas ${c.total} horas como máximo.`);
-                selectDocente.value = "";
+                alert(`⚠️ Límite de horas alcanzado para la materia ${c.nombre}. Tiene asignadas ${c.total} horas como máximo.`);
+                selectMateria.value = "";
+                filtrarDocentesPorMateria(selectMateria);
             }
         }
         recalcularTodosLosCupos();
@@ -512,9 +527,8 @@ if ($grupo_id) {
         let errores = [];
         let dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
         
-        // Verificación de huecos (espacios libres entre clases del mismo día)
         dias.forEach((dia, dIdx) => {
-            let filas = document.querySelectorAll('tbody tr');
+            let filas = document.querySelectorAll('tbody tr:not(.fila-recreo)');
             let encontradoInicio = false;
             let huboHueco = false;
 
@@ -540,10 +554,9 @@ if ($grupo_id) {
             });
         });
 
-        // Estadísticas por materia para pautas de inspección
         let estadisticasMaterias = {};
         dias.forEach((dia, dIdx) => {
-            let filas = document.querySelectorAll('tbody tr');
+            let filas = document.querySelectorAll('tbody tr:not(.fila-recreo)');
             filas.forEach(tr => {
                 let cell = tr.querySelectorAll('td')[dIdx + 1];
                 if (cell) {
@@ -561,36 +574,31 @@ if ($grupo_id) {
             });
         });
 
-        // Pautas inspectivas de asignaturas
         for (let matName in estadisticasMaterias) {
             let info = estadisticasMaterias[matName];
             let nameUpper = matName.toUpperCase();
 
-            // Matemática: 3 o más horas sugeridas en al menos 2 días
             if (nameUpper.includes("MATEMÁTICA") || nameUpper.includes("MATEMATICA")) {
                 if (info.total >= 3 && info.dias.size < 2) {
-                    errores.push(`📐 Pauta de Matemática: "${matName}" tiene ${info.total} horas pero se concentra en un único día. Se sugiere distribuir en al menos 2 días.`);
+                    errores.push(`📐 Pauta de Matemática: "${matName}" tiene ${info.total} horas pero se concentra en un único día.`);
                 }
             }
 
-            // Lenguas Extranjeras (Inglés/Portugués): 3 o 4 horas no deben concentrarse en un bloque único
             if (nameUpper.includes("INGLÉS") || nameUpper.includes("INGLES") || nameUpper.includes("PORTUGUÉS") || nameUpper.includes("PORTUGUES")) {
                 if (info.total >= 3 && info.dias.size === 1) {
-                    errores.push(`🌐 Pauta de Lenguas Extranjeras: "${matName}" tiene ${info.total} horas en un solo día, lo que contraviene la continuidad pedagógica recomendada.`);
+                    errores.push(`🌐 Pauta de Lenguas Extranjeras: "${matName}" tiene ${info.total} horas en un solo día.`);
                 }
             }
         }
 
-        // Control de cupos docentes
-        for (let id in cuposDocentes) {
-            let c = cuposDocentes[id];
-            let usados = contarHorasUsadasDocente(id);
+        for (let id in cuposMaterias) {
+            let c = cuposMaterias[id];
+            let usados = contarHorasUsadasMateria(id);
             if (usados > c.total) {
-                errores.push(`👤 El docente ${c.nombre} excede su cupo máximo (${usados}/${c.total} horas).`);
+                errores.push(`📚 La materia ${c.nombre} excede su cupo máximo (${usados}/${c.total} horas).`);
             }
         }
 
-        // Si hay errores/advertencias, se los mostramos al adscripto para que decida
         if (errores.length > 0) {
             let mensaje = "⚠️ ADVERTENCIA DE RESTRICCIONES HORARIAS:\n\n" + errores.join("\n") + "\n\n¿Desea confirmar la grilla de todos modos o cancelar para arreglarla?";
             return confirm(mensaje);
